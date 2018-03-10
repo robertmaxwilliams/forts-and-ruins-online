@@ -6,7 +6,9 @@ import (
     "net/http"
 	"io/ioutil"
 	"errors"
-	"golang.org/x/tools/playground/socket"
+	//"golang.org/x/tools/playground/socket"
+	//"gopkg.in/googollee/go-socket.io.v1"
+	"github.com/googollee/go-socket.io"
 )
 
 func getJsonFromRequest(w http.ResponseWriter, r * http.Request) (string, error) {
@@ -53,17 +55,34 @@ func gameStateHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	// use HundleFunc for dynamic requests, and 
+	// use WebSockets for client interaction, and 
 	// FileServer for uh you know serving files.
-	// Mux ties them together.
+	// Mux ties them together. TODO is Mux even needed?
 
 	mux := http.NewServeMux()
 
-	// for receiving gamestate from users
-    mux.HandleFunc("/gamestate", gameStateHandler)
+	// copied from https://github.com/googollee/go-socket.io
+	// TODO mess with once everything works
+	server, err := socketio.NewServer(nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	server.On("connection", func(so socketio.Socket) {
+		log.Println("on connection")
+		so.Join("chat")
+		so.On("chat message", func(msg string) {
+			log.Println("emit:", so.Emit("chat message", msg))
+			so.BroadcastTo("chat", "chat message", msg)
+		})
+		so.On("disconnection", func() {
+			log.Println("on disconnect")
+		})
+	})
+	server.On("error", func(so socketio.Socket, err error) {
+		log.Println("error:", err)
+	})
 
-	// for getting info when someone joins or leaves the page
-    mux.HandleFunc("/lobby", lobbyHandler)
+	mux.Handle("/socket.io/", server)
 
 	// servers html and js files
 	// you can also load everything in the repo

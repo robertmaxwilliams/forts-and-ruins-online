@@ -6,8 +6,30 @@
   <title>Forts and Ruins Multiplayer</title>
 
   <!-- are CDN's the devil? Proabably ok for now. -->
-  <script src="jquery-3.3.1.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdn.socket.io/socket.io-1.0.0.js"></script>
+
+
+
+<script>
+  $(document).ready(function(){
+    $("button").click(function(){
+      socket.emit('chat message', 'I hate cats')
+    });
+  });
+</script>
+
+<script>
+  var socket = io('http://localhost:8080');
+  socket.on('news', function (data) {
+    console.log(data);
+    socket.emit('chat message', { my: 'data' });
+  });
+</script>
 
 </head>
 
 <body>
+Just pretend there's a game here
+<button id="send-something">press me to send something</button>
+</body>
