@@ -4,45 +4,13 @@ import (
     "fmt"
     "log"
     "net/http"
-	"io/ioutil"
-	"errors"
+	"strings"
+//	"io/ioutil"
+//	"errors"
 	//"golang.org/x/tools/playground/socket"
 	//"gopkg.in/googollee/go-socket.io.v1"
 	"github.com/googollee/go-socket.io"
 )
-
-func getJsonFromRequest(w http.ResponseWriter, r * http.Request) (string, error) {
-	if r.Method == "POST" {
-			body, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				http.Error(w, "Error reading request body",
-					http.StatusInternalServerError)
-			}
-			return string(body), nil
-	} else {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		log.Println("Client sent bad request")
-		return "", errors.New("Invalid request method from client")
-	}
-}
-
-func lobbyHandler(w http.ResponseWriter, r *http.Request) {
-	json, httpErr := getJsonFromRequest(w, r)
-	if httpErr != nil {
-		return
-	}
-	fmt.Println(json)
-	w.Write([]byte("hello"))
-}
-
-func gameStateHandler(w http.ResponseWriter, r *http.Request) {
-	json, httpErr := getJsonFromRequest(w, r)
-	if httpErr != nil {
-		return
-	}
-	fmt.Println(json)
-	w.Write([]byte("hello"))
-}
 
 /*
  * Runs go server for Forts and Ruins
@@ -53,7 +21,24 @@ func gameStateHandler(w http.ResponseWriter, r *http.Request) {
  * as all the files. TODO allow for custom serve dir
  */
 
+
+func findString(arr []string, s string) int {
+	for i := range arr{
+		if arr[i] == s {
+			return i
+		}
+	}
+	return -1
+}
+func removeByValue(arr []string, s string) []string {
+	index := findString(arr, s)
+	arr = append(arr[:index], arr[index+1:]...)
+	return arr
+}
+
 func main() {
+	var users = make(map[string]bool)
+
 
 	// use WebSockets for client interaction, and 
 	// FileServer for uh you know serving files.
@@ -69,13 +54,27 @@ func main() {
 	}
 	server.On("connection", func(so socketio.Socket) {
 		log.Println("on connection")
-		so.Join("chat")
-		so.On("chat message", func(msg string) {
-			log.Println("emit:", so.Emit("chat message", msg))
-			so.BroadcastTo("chat", "chat message", msg)
+		room := "default"
+		user := "default"
+		so.Join(room)
+
+		so.On("room", func(msg string) {
+			fmt.Println("user joined room ", msg)
+			so.Join(msg)
+			room = msg
 		})
+
+		so.On("setname", func(msg string) {
+			fmt.Println("got: ", msg, ", in room: ", room)
+			so.BroadcastTo(room, "message", "you suck")
+			so.Emit("message", "I hate you")
+			user = strings.Trim(msg, " ")
+			users[user] = true
+		})
+
 		so.On("disconnection", func() {
-			log.Println("on disconnect")
+			fmt.Println("on disconnect")
+			users[user] = false
 		})
 	})
 	server.On("error", func(so socketio.Socket, err error) {

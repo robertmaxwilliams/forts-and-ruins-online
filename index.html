@@ -14,16 +14,25 @@
 <script>
   $(document).ready(function(){
     $("button").click(function(){
-      socket.emit('chat message', 'I hate cats')
+      socket.emit('setname', "joe")
+      console.log("sendt stuff")
     });
   });
 </script>
 
 <script>
+  var room = "1234"
   var socket = io('http://localhost:8080');
-  socket.on('news', function (data) {
-    console.log(data);
-    socket.emit('chat message', { my: 'data' });
+  socket.on('connect', function() {
+    socket.emit('room', room)
+    console.log("joined room ", room)
+  });
+
+  socket.on('message', function(data) {
+    console.log("got a message: ", data)
+  });
+  socket.on('1234 message', function(data) {
+    console.log("got a message: ", data)
   });
 </script>
 
