@@ -66,10 +66,14 @@ func main() {
 
 		so.On("setname", func(msg string) {
 			fmt.Println("got: ", msg, ", in room: ", room)
-			so.BroadcastTo(room, "message", "you suck")
-			so.Emit("message", "I hate you")
+			so.BroadcastTo(room, "message", msg + " has joined\n")
 			user = strings.Trim(msg, " ")
 			users[user] = true
+		})
+
+		so.On("message", func(msg string) {
+			fmt.Println("message: ", msg)
+			so.BroadcastTo(room, "message", msg)
 		})
 
 		so.On("disconnection", func() {

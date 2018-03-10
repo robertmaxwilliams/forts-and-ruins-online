@@ -13,15 +13,26 @@
 
 <script>
   $(document).ready(function(){
-    $("button").click(function(){
-      socket.emit('setname', "joe")
+    $("#send-name").click(function(){
+      socket.emit('setname',  $("#username").val())
       console.log("sendt stuff")
     });
+    $("#send-message").click(function(){
+      let message = $("#message").val() + '\n'
+      socket.emit('message',  message)
+      alltext += message
+      console.log("sendt stuff")
+      $('#textbox').text(alltext)
+    });
+
   });
+  
+  
 </script>
 
 <script>
   var room = "1234"
+  var alltext = ""
   var socket = io('http://localhost:8080');
   socket.on('connect', function() {
     socket.emit('room', room)
@@ -29,16 +40,19 @@
   });
 
   socket.on('message', function(data) {
-    console.log("got a message: ", data)
-  });
-  socket.on('1234 message', function(data) {
-    console.log("got a message: ", data)
+    console.log("got a : ", data)
+    alltext += data
+    $('#textbox').text(alltext)
   });
 </script>
 
 </head>
 
 <body>
-Just pretend there's a game here
-<button id="send-something">press me to send something</button>
+<button id="send-name">press me to set name</button>
+<input id="username" type="text" value="">
+<br>
+<button id="send-message">send</button>
+<input id="message" type="text" value="">
+<p id="textbox" style="white-space:pre-wrap;">Nothing yet</p>
 </body>
