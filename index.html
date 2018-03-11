@@ -1,58 +1,91 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <!-- Authors: Robert Max Williams. Public Domain Dedication. -->
-  <meta charset="utf-8">
-  <title>Forts and Ruins Multiplayer</title>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-  <!-- are CDN's the devil? Proabably ok for now. -->
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-  <script src="https://cdn.socket.io/socket.io-1.0.0.js"></script>
+    <title> Forts and Ruins Multiplayer </title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+
+  </head>
+  <body>
 
 
 
-<script>
-  $(document).ready(function(){
-    $("#send-name").click(function(){
-      socket.emit('setname',  $("#username").val())
-      console.log("sendt stuff")
-    });
-    $("#send-message").click(function(){
-      let message = $("#message").val() + '\n'
-      socket.emit('message',  message)
-      alltext += message
-      console.log("sendt stuff")
-      $('#textbox').text(alltext)
-    });
 
-  });
+    <div id="login-logout-area" >
+      <h1> welcome to forts and ruins online multiplayer </h1>
+
+      <form id="login-form" class="p-2" style="max-width: 500px; display:none;">
+        <div class="form-group " >
+          <label>
+            User Name
+            <input name="username" type="text" class="form-control" 
+                   id="username" placeholder="Enter username" required>
+          </label>
+        </div>
+        <div class="form-check">
+          <label class="form-check-label">
+            <input name="remember-me" id="remember-me" type="checkbox" class="form-check-input">
+            Remember me 
+          </label>
+        </div>
+        <button id="login-button" class="btn btn-primary">Login</button>
+      </form> 
+
+      <div id="user-bar" style="display:none;">
+        <span id="display-username"></span>
+        <button id="logout" class="btn btn-secondary">Log out</button>
+      </div>
+
+    </div>
+
+    <hr/>
+
+    <div id="matchmaking" style="display:none;">
+      <h4> Matchmaking </h4>
+      <div><b>Online Users: </b><span id="user-list"><span></div>
+
+      <h5> Create new match: </h5>
+      <div class="container">
+        <div class="row">
+          <div class="col-sm-4">
+            <button class="btn btn-secondary" onclick="makeNewMatch(10)" > New 10x10 game </button> 
+          </div>
+          <div class="col-sm-4">
+            <button class="btn btn-secondary" onclick="makeNewMatch(20)" > New 20x20 game </button> 
+          </div>
+          <div class="col-sm-4">
+            <button class="btn btn-secondary" onclick="makeNewMatch(30)" > New 30x30 game </button> 
+          </div>
+        </div>
+      </div>
+
+      <h5> Join a Match: </h5>
+      <div id="match-list-container">
+        <!-- a ul fill of li's gets slammed in here by jquery -->
+      </div>
+
+    </div>
+    <!-- jQuery first, then Tether, then Bootstrap JS. -->
+    <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+
+
+    <!-- socket cdn -->
+    <script src="https://cdn.socket.io/socket.io-1.0.0.js"></script>
+    <!-- jquery cdn lol -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
   
-  
-</script>
+    <!-- my actual code -->
+    <script src="cookie-helper.js"></script>
+    <script src="main.js"></script>
+  </body>
+</html>
 
-<script>
-  var room = "1234"
-  var alltext = ""
-  var socket = io('http://localhost:8080');
-  socket.on('connect', function() {
-    socket.emit('room', room)
-    console.log("joined room ", room)
-  });
 
-  socket.on('message', function(data) {
-    console.log("got a : ", data)
-    alltext += data
-    $('#textbox').text(alltext)
-  });
-</script>
 
-</head>
-
-<body>
-<button id="send-name">press me to set name</button>
-<input id="username" type="text" value="">
-<br>
-<button id="send-message">send</button>
-<input id="message" type="text" value="">
-<p id="textbox" style="white-space:pre-wrap;">Nothing yet</p>
-</body>
