@@ -31,11 +31,11 @@ type Match struct {
 type Move struct {
   I int
   J int
-  Color byte
+  Color string
 }
 
 type Game struct {
-  Board [][]byte
+  Board [][]string
   Host string
   Guest string
   Room string
@@ -46,9 +46,9 @@ type Game struct {
 func getUserList(userSet map[string]bool) []string {
     keys := make([]string, 0, len(userSet))
     for k, v := range userSet{
-		if v {
-			keys = append(keys, k)
-		}
+      if v {
+        keys = append(keys, k)
+      }
     }
 	return keys
 }
@@ -60,25 +60,86 @@ func emitUserList(so socketio.Socket, userSet map[string]bool) {
 	log.Println(string(userlist))
 }
 
+func printBoard(game *Game) {
+  fmt.Println(game.Room)
+  for _, row := range game.Board {
+    for _, cell := range row {
+      if cell == "" {
+        fmt.Print(" ")
+      } else {
+        fmt.Print(string(cell[0]))
+      }
+    }
+    fmt.Println()
+  }
+}
+
+// forts are created in a plus
+// around last move.
+// Then, forts are added in a plus
+// around each fort, iterated twice
+// each for is checked for being surrounded
+// by something other that ''Dirt and 'B'arren
+// and destoyed if it is. Iterate thrice
+func growForts(game *Game, move Move, iterations int) {
+  printBoard(game)
+  if iterations == 0 {
+    return
+  }
+  fmt.Println(move)
+  for _, coords := range [][]int{{0,1}, {1,0}, {-1,0}, {0,-1}} {
+    i := move.I + coords[0]
+    j := move.J + coords[1]
+    if (i > 15 || i < 0 || j > 15 || j < 0) { continue }
+    if (game.Board[i][j] == "") {
+      // Color is actually user's name in this case
+      game.Board[i][j] = move.Color
+      growForts(game, Move{I: i, J: j, Color: move.Color}, iterations-1)
+
+      // after propogating forts around, if I see dirt or deadfort, 
+      // delete myself
+      for _, checkCoords := range [][]int{{0,1}, {1,0}, {-1,0}, {0,-1}} {
+        checki := i + checkCoords[0]
+        checkj := j + checkCoords[1]
+        if (checki > 15 || checki < 0 || checkj > 15 || checkj < 0) { continue }
+        if game.Board[checki][checkj] == "" || game.Board[checki][checkj] == "D" {
+          game.Board[i][j] = ""
+          break
+        }
+      }
+    }
+  }
+}
+
+// wrapper func for growForts
+func addForts(game *Game, lastMove Move, player string) {
+  growForts(game, Move{I: lastMove.I, J: lastMove.J, Color: player}, 3)
+}
+
 // modifies game's board in place
-func makeMove(move Move, game Game) {
-  if game.Board[move.I][move.J] == 0 {
+func makeMove(game *Game, move Move) {
+  if game.Board[move.I][move.J] == "" {
     game.Board[move.I][move.J] = move.Color
   }
 }
 
-func updateGame(game Game) bool{
+func updateGame(game *Game) bool{
+  fmt.Println("updating game ", game)
   if (game.HostMove != Move{}) && (game.GuestMove != Move{}) {
-    if game.HostMove.I != game.GuestMove.I && game.HostMove.J != game.GuestMove.J {
-      makeMove(game.HostMove, game)
-      makeMove(game.GuestMove, game)
+    fmt.Println("moves in for ", game.Room, "playing moves")
+    if game.HostMove.I != game.GuestMove.I || game.HostMove.J != game.GuestMove.J {
+      makeMove(game, game.HostMove)
+      makeMove(game, game.GuestMove)
+      addForts(game, game.HostMove, game.Host)
+      addForts(game, game.GuestMove, game.Guest)
     }
-  game.HostMove = Move{}
-  game.GuestMove = Move{}
-  return true
+    game.HostMove = Move{}
+    game.GuestMove = Move{}
+    return true
   }
   return false
 }
+
 func main() {
 
 	// "--testing" flag to run in local dir
@@ -92,11 +153,9 @@ func main() {
 		serverAddress = "http://localhost:8080"
 	}
 
-
 	var userSet = make(map[string]bool)
 	var matches []Match
-  var games = make(map[string]Game)
-
+  var games = make(map[string]*Game)
 
 	// use WebSockets for client interaction, and 
 	// FileServer for uh you know serving files.
@@ -191,13 +250,13 @@ func main() {
 			so.Emit("initiategame", gameRoom)
 			so.BroadcastTo("lobby", "initiategame", gameRoom)
       boardSize := 15
-      newGame := Game{Board: make([][]byte, boardSize),
+      newGame := Game{Board: make([][]string, boardSize),
                       Host: host, Guest: guest, Room: gameRoom}
       for i := 0; i < boardSize; i++ {
-        newGame.Board[i] = make([]byte, boardSize)
+        newGame.Board[i] = make([]string, boardSize)
       }
       log.Println(newGame.Board)
-      games[gameRoom] = newGame
+      games[gameRoom] = &newGame
 		})
 
     so.On("playmove", func (move string) {
@@ -211,18 +270,29 @@ func main() {
       } else if game.Guest == user {
         game.GuestMove = newMove
       } else {
-        log.Println(user, "is in invalid room")
+        log.Println(user, "is in an invalid room")
       }
       succeeded := updateGame(game)
+
       if succeeded {
         boardJson, _ := json.Marshal(game.Board)
-        so.Emit("updatedboard", boardJson)
-        so.BroadcastTo(game.Room, "updatedboard", boardJson)
+        so.Emit("updatedboard", string(boardJson))
+        fmt.Println("sending back json for board: ", string(boardJson))
+        so.BroadcastTo(game.Room, "updatedboard", string(boardJson))
       } else {
         so.Emit("message", "moves not valid or waiting on opponent")
       }
     })
 
+    so.On("cancelmove", func(msg string) {
+      fmt.Println(user, "canceled move")
+      game := games[room]
+      if game.Host == user {
+        game.HostMove = Move{}
+      } else {
+        game.GuestMove = Move{}
+      }
+    })
 
 		so.On("disconnection", func() {
 			fmt.Println("on disconnect")

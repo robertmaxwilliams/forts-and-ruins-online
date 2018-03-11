@@ -24,6 +24,7 @@ When one player dies, the other wins and is happy about winning.
 
 // global vars
 var username = ''
+var enemyname = ''
 var room = 'lobby'
 var otherUsers = []
 var matches = []
@@ -73,12 +74,26 @@ function activateSockets(address) {
     console.log("someone else made gameroom: ", gameroom)
     let [host, guest] = gameroom.split(':')
     console.log("game with ", host, guest, " initiated")
+
     if (username == host || username == guest){
       socket.emit('room', gameroom)
       room = gameroom
       console.log('joining a game room: ', gameroom)
       joinGame(host, guest)
     }
+
+    if (username == host) {
+      enemyname = guest
+    } else if (username == guest) {
+      enemyname = host
+    }
+  })
+
+  socket.on('updatedboard', function(board) {
+    // in game.js, un-selects sqaure that was clicked on
+    unselect()
+    boardLocal = JSON.parse(board)
+    drawBoard()
   })
   
 

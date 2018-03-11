@@ -20,6 +20,7 @@ const colors = {
   field: ['#496645', '#5d7046', '#7d7046', '#d6b458', '#ed572d', '#9b76b8'],
   barren: '#1F2A28',
   fort: {gem: '#82355B', stone: '#A9A9A9'},
+  enemy: {gem: '#9B111E', stone: '#0A0A0A'},
   ruin: {gem: '#691C42', stone: '#0A0A0A'},
 }
 
@@ -38,8 +39,11 @@ function drawBoard(board){
     for (let j = 0; j < gridSize; j++) {
       if (boardLocal[i][j]) {
         switch(boardLocal[i][j]) {
-        case 'F': // fort
+        case username: // fort
             drawSquare(i, j, colors.fort.stone, colors.fort.gem)
+            break;
+        case enemyname: // enemy
+            drawSquare(i, j, colors.enemy.stone, colors.enemy.gem)
             break;
         case 'R': // ruin
             drawSquare(i, j, colors.ruin.stone, colors.ruin.gem)
@@ -80,13 +84,28 @@ function drawSquare(i, j, color, diamondColor){
 // only clear what was drawn
 var lasti = -1
 var lastj = -1
+var lastClickedi = null
+var lastClickedj = null
+
 function hoverBoard(event){
   let x = event.offsetX
   let y = event.offsetY
-  i = Math.floor(x/dx)
-  j = Math.floor(y/dy)
+  let i = Math.floor(x/dx)
+  let j = Math.floor(y/dy)
   if (i == lasti && j == lastj) {
     return
+  }
+
+  // if we click on what was clicked, unclick it
+  //if (i == lastClickedi && j == lastClickedj) {
+   // lastClickedi = null
+    //lastClickedj = null
+  //}
+
+  // if something is clicked, draw it instead
+  if (lastClickedi && lastClickedj) {
+    i = lastClickedi
+    j = lastClickedj
   }
 
   // bounds checking since we have to access array
@@ -112,20 +131,33 @@ function hoverBoard(event){
   
  }
 
+function unselect() {
+  lastClickedi = null
+  lastClickedj = null
+}
+
 function clickBoard(event){
 
   let x = event.offsetX
   let y = event.offsetY
-  console.log(x)
+
   let i = Math.floor(x/dx)
   let j = Math.floor(y/dy)
 
-  if (!boardLocal[i][j]) {
+  // if we have something clicked, unlick it
+  // otherwise set down a solid click on that click
+  // if it's valid, of course
+  if (lastClickedi && lastClickedj) {
+    console.log("unclick")
+    unselect()
+    socket.emit('cancelmove', null)
+  } else if (!boardLocal[i][j] || boardLocal[i][j] == "") {
+    console.log("click")
+    lastClickedi = i 
+    lastClickedj = j
     let move = {I: i, J: j, Color : pickedColor.toString()}
     socket.emit('playmove', JSON.stringify(move))
     console.log('you played', move)
-    boardLocal[i][j] = move.Color
-    drawBoard()
   }
 
 } 
