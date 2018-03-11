@@ -88,6 +88,7 @@ $.ajax({
   type: 'POST',
   url: 'serverip',
   success: function(data) {
+    console.log("computed server address callback injection: ", data)
     activateSockets(data)
     loadEverything()
   },
