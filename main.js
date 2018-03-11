@@ -76,8 +76,8 @@ function activateSockets(address) {
     if (username == host || username == guest){
       socket.emit('room', gameroom)
       room = gameroom
-      console.log('joined a game room: ', gameroom)
-      //startGame(gameroom)
+      console.log('joining a game room: ', gameroom)
+      joinGame(host, guest)
     }
   })
   
@@ -159,6 +159,7 @@ function logout(name){
 
 function makeNewMatch(size) {
   // notice the upercase properties to agree with GoLang
+  // a match only has a Host, the guest has to fill themselves in
   let match = {Host: username, Boardsize: size}
 
   // server should emit an 'updatematches' when done
@@ -174,15 +175,24 @@ function deleteMatch(index) {
 }
 
 // creates a new room with name host:
-function joinMatch(host) {
+function makeGame(host, guest) {
   gameroom = host + ':' + username
+  socket.emit('makegame', gameroom)
+}
+
+function joinGame(host, guest) {
+  gameroom = host + ':' + guest
   // ask server to make a gameroom for us
   // it parses gameroom to get our names
   // and checks if we are in the lobby
   // then sends back 'iniategame' to both
-  socket.emit('makegame', gameroom)
+  console.log("entering game ", gameroom)
+ 
+  $('#matchmaking').hide()
+  $('#game').show()
+  $('#gameheader').text(gameroom)
 }
-  
+
 function updateMatches(){
   var $matchList = $("<ul>");
 
@@ -195,7 +205,11 @@ function updateMatches(){
                     .on('click', function() {deleteMatch(index)}) )
       } else {
         li.append( $("<button>").text("join")
-                    .on('click', function() {joinMatch(match.Host)}) )
+                    .on('click', function() {
+                        console.log("making and joining match=", JSON.stringify(match))
+                        makeGame(match.Host, username)
+                        joinGame(match.Host, username)
+                      }) )
       }
   });
   $('#match-list-container').html($matchList)

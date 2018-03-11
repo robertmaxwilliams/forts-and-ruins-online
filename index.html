@@ -12,6 +12,17 @@
 
 
   </head>
+  <style>
+    canvas {
+        height: 600px;
+        width: 500px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin-left: -250px;
+    }
+  </style>
+  
   <body>
 
 
@@ -72,11 +83,10 @@
 
     </div>
 
-    <div style="position: relative;">
-      <canvas id="main-canvas" width="500" height="500" 
-               style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
-      <canvas id="temp-canvas" width="500" height="500" 
-               style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
+    <div id="game" style="position: relative; display:none;">
+      <h5 id="gameheader"></h5>
+      <canvas id="main-canvas" width="500" height="600"></canvas>
+      <canvas id="temp-canvas" width="500" height="600"></canvas>
     </div>
 
     <!-- socket cdn -->

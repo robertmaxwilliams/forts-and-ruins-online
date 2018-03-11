@@ -8,7 +8,6 @@ var ctx = mainCanvas.getContext('2d');
 var tempCanvas = document.getElementById('temp-canvas')
 var ctxTemp = tempCanvas.getContext('2d');
 
-
 // canvas is square with a color palette on the bottom
 // pal = palette because palette is hard to spell.
 const boardWidth = 500
@@ -29,12 +28,10 @@ var gridSize = 15
 var dx = Math.floor(boardWidth / gridSize)
 var dy = Math.floor(boardHeight / gridSize)
 
-
 var boardLocal = new Array(gridSize);
 for (var i = 0; i < gridSize; i++) {
   boardLocal[i] = new Array(gridSize);
 }
-
 
 function drawBoard(board){
   for (let i = 0; i < gridSize; i++) {
@@ -50,7 +47,7 @@ function drawBoard(board){
         case 'B': // barren (dead field)
             drawSquare(i, j, colors.barren)
             break;
-        default: // hopefully a number 0-6 as a string
+        default: // hopefully a number 0-6 
             drawSquare(i, j, colors.field[parseInt(boardLocal[i][j])])
         }
       }
@@ -91,16 +88,21 @@ function hoverBoard(event){
   if (i == lasti && j == lastj) {
     return
   }
-  if (boardLocal[i][j]) {
-    ctxTemp.globalAlpha = 0.5
-    ctxTemp.fillStyle = colors.barren
-  } else {
-    ctxTemp.globalAlpha = 0.8
-    ctxTemp.fillStyle = colors.field[pickedColor]
+
+  // bounds checking since we have to access array
+  if (i < gridSize && i >= 0 && j < gridSize && j >= 0){
+    if (boardLocal[i][j]) {
+      ctxTemp.globalAlpha = 0.5
+      ctxTemp.fillStyle = colors.barren
+    } else {
+      ctxTemp.globalAlpha = 1.0
+      ctxTemp.fillStyle = colors.field[pickedColor]
+    }
   }
 
   ctxTemp.beginPath()
   ctxTemp.clearRect(dx*lasti, dx*lastj, dx, dy)
+
   ctxTemp.rect(dx*i, dx*j, dx, dy)
   ctxTemp.fill()
   let margin = 5
@@ -115,6 +117,16 @@ function clickBoard(event){
   let x = event.offsetX
   let y = event.offsetY
   console.log(x)
+  let i = Math.floor(x/dx)
+  let j = Math.floor(y/dy)
+
+  if (!boardLocal[i][j]) {
+    let move = {I: i, J: j, Color : pickedColor.toString()}
+    socket.emit('playmove', JSON.stringify(move))
+    console.log('you played', move)
+    boardLocal[i][j] = move.Color
+    drawBoard()
+  }
 
 } 
 

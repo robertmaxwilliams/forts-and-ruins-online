@@ -25,18 +25,22 @@ type Match struct {
 	Boardsize int
 }
 
-func findString(arr []string, s string) int {
-	for i := range arr{
-		if arr[i] == s {
-			return i
-		}
-	}
-	return -1
+// move = {I: i, J: j, Color : pickedColor.toString()}
+// i and j are like x and y but for discrete grid
+// color will be "0" to "6"
+type Move struct {
+  I int
+  J int
+  Color byte
 }
-func removeByValue(arr []string, s string) []string {
-	index := findString(arr, s)
-	arr = append(arr[:index], arr[index+1:]...)
-	return arr
+
+type Game struct {
+  Board [][]byte
+  Host string
+  Guest string
+  Room string
+  HostMove Move
+  GuestMove Move
 }
 
 func getUserList(userSet map[string]bool) []string {
@@ -56,6 +60,25 @@ func emitUserList(so socketio.Socket, userSet map[string]bool) {
 	log.Println(string(userlist))
 }
 
+// modifies game's board in place
+func makeMove(move Move, game Game) {
+  if game.Board[move.I][move.J] == 0 {
+    game.Board[move.I][move.J] = move.Color
+  }
+}
+
+func updateGame(game Game) bool{
+  if (game.HostMove != Move{}) && (game.GuestMove != Move{}) {
+    if game.HostMove.I != game.GuestMove.I && game.HostMove.J != game.GuestMove.J {
+      makeMove(game.HostMove, game)
+      makeMove(game.GuestMove, game)
+    }
+  game.HostMove = Move{}
+  game.GuestMove = Move{}
+  return true
+  }
+  return false
+}
 func main() {
 
 	// "--testing" flag to run in local dir
@@ -72,6 +95,7 @@ func main() {
 
 	var userSet = make(map[string]bool)
 	var matches []Match
+  var games = make(map[string]Game)
 
 
 	// use WebSockets for client interaction, and 
@@ -166,7 +190,39 @@ func main() {
 
 			so.Emit("initiategame", gameRoom)
 			so.BroadcastTo("lobby", "initiategame", gameRoom)
+      boardSize := 15
+      newGame := Game{Board: make([][]byte, boardSize),
+                      Host: host, Guest: guest, Room: gameRoom}
+      for i := 0; i < boardSize; i++ {
+        newGame.Board[i] = make([]byte, boardSize)
+      }
+      log.Println(newGame.Board)
+      games[gameRoom] = newGame
 		})
+
+    so.On("playmove", func (move string) {
+      fmt.Println(user, "played", move)
+      var newMove Move
+      _ = json.Unmarshal([]byte(move), &newMove)
+      fmt.Println("unmarshalled to", newMove)
+      game := games[room]
+      if game.Host == user {
+        game.HostMove = newMove
+      } else if game.Guest == user {
+        game.GuestMove = newMove
+      } else {
+        log.Println(user, "is in invalid room")
+      }
+      succeeded := updateGame(game)
+      if succeeded {
+        boardJson, _ := json.Marshal(game.Board)
+        so.Emit("updatedboard", boardJson)
+        so.BroadcastTo(game.Room, "updatedboard", boardJson)
+      } else {
+        so.Emit("message", "moves not valid or waiting on opponent")
+      }
+    })
+
 
 		so.On("disconnection", func() {
 			fmt.Println("on disconnect")
