@@ -63,7 +63,7 @@ func main() {
     flag.Parse()
 	isTesting := *isTestingPtr
 	workingDir := "/home/public/forts-and-ruins-online/"
-	serverAddress := "http://fortsandruins.nfshost.com:8080"
+	serverAddress := "http://fortsandruins.nfshost.com"
 	if isTesting {
 		workingDir = "./"
 		serverAddress = "http://localhost:8080"
