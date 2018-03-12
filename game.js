@@ -28,6 +28,8 @@ var pickedColor = 0
 var gridSize = 15
 var dx = Math.floor(boardWidth / gridSize)
 var dy = Math.floor(boardHeight / gridSize)
+var paldx = Math.floor(palWidth / 6)
+
 
 var boardLocal = new Array(gridSize);
 for (var i = 0; i < gridSize; i++) {
@@ -40,13 +42,13 @@ function drawBoard(board){
       if (boardLocal[i][j]) {
         switch(boardLocal[i][j]) {
         case username: // fort
-            drawSquare(i, j, colors.fort.stone, colors.fort.gem)
+            drawSquare(i, j, colors.fort.stone, ctx, colors.fort.gem)
             break;
         case enemyname: // enemy
-            drawSquare(i, j, colors.enemy.stone, colors.enemy.gem)
+            drawSquare(i, j, colors.enemy.stone, ctx, colors.enemy.gem)
             break;
         case 'R': // ruin
-            drawSquare(i, j, colors.ruin.stone, colors.ruin.gem)
+            drawSquare(i, j, colors.ruin.stone, ctx, colors.ruin.gem)
             break;
         case 'B': // barren (dead field)
             drawSquare(i, j, colors.barren)
@@ -59,23 +61,58 @@ function drawBoard(board){
   }
 }
 
-function drawSquare(i, j, color, diamondColor){
+function drawColorPicker() {
+  for (let color = 0; color < 6; color++) {
+    ctx.beginPath()
+    let left = Math.floor(boardWidth*(color/6))
+    let width = Math.floor(boardWidth*((color+1)/6)) - left
+    ctx.rect(left, boardHeight, width, palHeight)
+    ctx.fillStyle = colors.field[color]
+    ctx.fill()
+    ctx.closePath()
+  }
+  drawPickedColor()
+}
 
-  ctx.beginPath();
-  ctx.rect(dx*i, dy*j, dx, dy)
-  ctx.fillStyle = color
-  ctx.fill();
-  ctx.closePath();
+// draws a solid bar on top of color picker indicating what you picked
+function drawPickedColor() {
+  ctx.beginPath()
+  ctx.rect(0, boardHeight, boardWidth, palHeight/4)
+  ctx.fillStyle = colors.field[pickedColor]
+  ctx.fill()
+  ctx.closePath()
+}
+  
+
+function drawSquare(i, j, color, context, diamondColor){
+
+  if (!context) {
+    context = ctx
+  }
+
+  let left = Math.floor(boardWidth*(i/gridSize))
+  let topp = Math.floor(boardHeight*(j/gridSize))
+  let width = Math.floor(boardWidth*((i+1)/gridSize)) - left
+  let height = Math.floor(boardHeight*((j+1)/gridSize)) - topp
+  if (color == 'erase') {
+    context.clearRect(left, topp, width, height)
+  } else {
+    context.beginPath();
+    context.rect(left, topp, width, height)
+    context.fillStyle = color
+    context.fill();
+    context.closePath();
+  }
   if (diamondColor) {
     let half = Math.floor(dx/2)
-    ctx.fillStyle = diamondColor
-    ctx.beginPath();
-    ctx.moveTo(dx*i+half, dy*j)
-    ctx.lineTo(dx*i+dx, dy*j+half)
-    ctx.lineTo(dx*i+half, dy*j+dy)
-    ctx.lineTo(dx*i, dy*j+half)
-    ctx.closePath();
-    ctx.fill()
+    context.fillStyle = diamondColor
+    context.beginPath();
+    context.moveTo(dx*i+half, dy*j)
+    context.lineTo(dx*i+dx, dy*j+half)
+    context.lineTo(dx*i+half, dy*j+dy)
+    context.lineTo(dx*i, dy*j+half)
+    context.closePath();
+    context.fill()
   }
 }
 
@@ -90,8 +127,8 @@ var lastClickedj = null
 function hoverBoard(event){
   let x = event.offsetX
   let y = event.offsetY
-  let i = Math.floor(x/dx)
-  let j = Math.floor(y/dy)
+  let i = Math.floor(x * gridSize / boardWidth )
+  let j = Math.floor(y * gridSize / boardHeight)
   if (i == lasti && j == lastj) {
     return
   }
@@ -108,7 +145,7 @@ function hoverBoard(event){
     j = lastClickedj
   }
 
-  // bounds checking since we have to access array
+  // bounds checking 
   if (i < gridSize && i >= 0 && j < gridSize && j >= 0){
     if (boardLocal[i][j]) {
       ctxTemp.globalAlpha = 0.5
@@ -117,18 +154,19 @@ function hoverBoard(event){
       ctxTemp.globalAlpha = 1.0
       ctxTemp.fillStyle = colors.field[pickedColor]
     }
+
+    drawSquare(i, j, colors.field[pickedColor], ctxTemp)
   }
 
-  ctxTemp.beginPath()
-  ctxTemp.clearRect(dx*lasti, dx*lastj, dx, dy)
+  // don't erase if click is on
+  if (!lastClickedi && !lastClickedj) {
+    // clear last rect as we go
+    drawSquare(lasti, lastj, 'erase', ctxTemp)
+    ctxTemp.globalAlpha = 1.0
+  }
 
-  ctxTemp.rect(dx*i, dx*j, dx, dy)
-  ctxTemp.fill()
-  let margin = 5
-  ctxTemp.closePath()
   lasti = i
   lastj = j
-  
  }
 
 function unselect() {
@@ -144,20 +182,28 @@ function clickBoard(event){
   let i = Math.floor(x/dx)
   let j = Math.floor(y/dy)
 
-  // if we have something clicked, unlick it
-  // otherwise set down a solid click on that click
-  // if it's valid, of course
-  if (lastClickedi && lastClickedj) {
-    console.log("unclick")
-    unselect()
-    socket.emit('cancelmove', null)
-  } else if (!boardLocal[i][j] || boardLocal[i][j] == "") {
-    console.log("click")
-    lastClickedi = i 
-    lastClickedj = j
-    let move = {I: i, J: j, Color : pickedColor.toString()}
-    socket.emit('playmove', JSON.stringify(move))
-    console.log('you played', move)
+  // if it is on the main board area
+  if (i >= 0 && i < gridSize && j >= 0 && j < gridSize) {
+
+    // if we have something clicked, unlick it
+    // otherwise set down a solid click on that click
+    // if it's valid, of course
+    if (lastClickedi && lastClickedj) {
+      console.log("unclick")
+      unselect()
+      socket.emit('cancelmove', null)
+    } else if (!boardLocal[i][j] || boardLocal[i][j] == "") {
+      console.log("click")
+      lastClickedi = i 
+      lastClickedj = j
+      let move = {I: i, J: j, Color : pickedColor.toString()}
+      socket.emit('playmove', JSON.stringify(move))
+      console.log('you played', move)
+    }
+  // otherwise probable clicked on the pallete. or maybe an edge lol
+  } else {
+    pickedColor = Math.floor(x * 6 / boardWidth) % 6
+    drawPickedColor()
   }
 
 } 
@@ -173,6 +219,7 @@ function drawDirt(){
   }
 }
 drawDirt()
+drawColorPicker()
 
 function repeatableRNG(seed) {
   return (seed * 9301 + 49297) % 233280

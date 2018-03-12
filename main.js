@@ -89,15 +89,22 @@ function activateSockets(address) {
     }
   })
 
-  socket.on('updatedboard', function(board) {
+  socket.on('updatedgame', function(board) {
     // in game.js, un-selects sqaure that was clicked on
     unselect()
-    boardLocal = JSON.parse(board)
+    let gameUpdate = JSON.parse(board)
+    boardLocal = gameUpdate.Board
+    console.log("got full game update")
+    killColorAnimation(gameUpdate.KillColor)
     drawBoard()
   })
   
 
 }
+
+function killColorAnimation(killColor) {
+  console.log(killColor)
+}//TODO
 
 $.ajax({
   type: 'POST',

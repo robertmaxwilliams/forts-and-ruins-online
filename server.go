@@ -1,13 +1,14 @@
 package main
 
 import (
-    "fmt"
-    "log"
-    "net/http"
+	"fmt"
+	"log"
+	"net/http"
 	"strings"
 	"encoding/json"
 	"flag"
-
+	"math/rand"
+	"strconv"
 	"github.com/googollee/go-socket.io"
 )
 
@@ -41,6 +42,7 @@ type Game struct {
   Room string
   HostMove Move
   GuestMove Move
+  KillColor string
 }
 
 func getUserList(userSet map[string]bool) []string {
@@ -81,39 +83,76 @@ func printBoard(game *Game) {
 // each for is checked for being surrounded
 // by something other that ''Dirt and 'B'arren
 // and destoyed if it is. Iterate thrice
-func growForts(game *Game, move Move, iterations int) {
-  printBoard(game)
+func growForts(game *Game, move Move, iterations int, placedForts *[]Move ) {
   if iterations == 0 {
     return
   }
+  printBoard(game)
   fmt.Println(move)
   for _, coords := range [][]int{{0,1}, {1,0}, {-1,0}, {0,-1}} {
     i := move.I + coords[0]
     j := move.J + coords[1]
-    if (i > 15 || i < 0 || j > 15 || j < 0) { continue }
+    if (i >= 15 || i < 0 || j >= 15 || j < 0) { continue }
     if (game.Board[i][j] == "") {
       // Color is actually user's name in this case
       game.Board[i][j] = move.Color
-      growForts(game, Move{I: i, J: j, Color: move.Color}, iterations-1)
+      // keep all the forts we've placed
+      *placedForts = append(*placedForts, Move{I: i, J: j, Color: move.Color})
+      growForts(game, Move{I: i, J: j, Color: move.Color}, iterations-1, placedForts)
+    }
+  }
+}
 
-      // after propogating forts around, if I see dirt or deadfort, 
-      // delete myself
-      for _, checkCoords := range [][]int{{0,1}, {1,0}, {-1,0}, {0,-1}} {
-        checki := i + checkCoords[0]
-        checkj := j + checkCoords[1]
-        if (checki > 15 || checki < 0 || checkj > 15 || checkj < 0) { continue }
-        if game.Board[checki][checkj] == "" || game.Board[checki][checkj] == "D" {
-          game.Board[i][j] = ""
-          break
-        }
+
+func killForts(game *Game, placedForts *[]Move) {
+
+  fmt.Println(*placedForts)
+  printBoard(game)
+  for _, move := range *placedForts {
+    i := move.I
+    j := move.J
+    if game.Board[move.I][move.J] == "" || game.Board[move.I][move.J] == "D" { continue }
+    // after propogating forts around, if I see dirt or deadfort, 
+    // delete myself
+    for _, checkCoords := range [][]int{{0,1}, {1,0}, {-1,0}, {0,-1}} {
+      checki := i + checkCoords[0]
+      checkj := j + checkCoords[1]
+      if (checki >= 15 || checki < 0 || checkj >= 15 || checkj < 0) { continue }
+      if game.Board[checki][checkj] == "" || game.Board[checki][checkj] == "B" {
+        game.Board[i][j] = ""
+        break
       }
     }
   }
 }
 
+
 // wrapper func for growForts
 func addForts(game *Game, lastMove Move, player string) {
-  growForts(game, Move{I: lastMove.I, J: lastMove.J, Color: player}, 3)
+  placedForts := make([]Move, 0, 128)
+  growForts(game, Move{I: lastMove.I, J: lastMove.J, Color: player}, 3, &placedForts)
+  for n := 0; n < 3; n++ {
+    killForts(game, &placedForts)
+  }
+}
+
+func killRandomColor(game *Game) {
+  for i := 0; i < 15; i++ {
+    for j := 0; j < 15; j++ {
+      if game.Board[i][j] == game.KillColor {
+		log.Println("killed a thing")
+        game.Board[i][j] = "B"
+		for _, checkCoords := range [][]int{{0,1}, {1,0}, {-1,0}, {0,-1}} {
+		  checki := i + checkCoords[0]
+		  checkj := j + checkCoords[1]
+		  if (checki >= 15 || checki < 0 || checkj >= 15 || checkj < 0) { continue }
+		  if game.Board[checki][checkj] == "F" {
+			  game.Board[checki][checkj] = "D"
+		  }
+		}
+      }
+    }
+  }
 }
 
 // modifies game's board in place
@@ -132,6 +171,7 @@ func updateGame(game *Game) bool{
       makeMove(game, game.GuestMove)
       addForts(game, game.HostMove, game.Host)
       addForts(game, game.GuestMove, game.Guest)
+      killRandomColor(game)
     }
     game.HostMove = Move{}
     game.GuestMove = Move{}
@@ -272,13 +312,14 @@ func main() {
       } else {
         log.Println(user, "is in an invalid room")
       }
+      game.KillColor = strconv.Itoa(rand.Intn(6))
       succeeded := updateGame(game)
 
       if succeeded {
-        boardJson, _ := json.Marshal(game.Board)
-        so.Emit("updatedboard", string(boardJson))
-        fmt.Println("sending back json for board: ", string(boardJson))
-        so.BroadcastTo(game.Room, "updatedboard", string(boardJson))
+        gameJson, _ := json.Marshal(game)
+        so.Emit("updatedgame", string(gameJson))
+        fmt.Println("sending back json for game: ", string(gameJson))
+        so.BroadcastTo(game.Room, "updatedgame", string(gameJson))
       } else {
         so.Emit("message", "moves not valid or waiting on opponent")
       }
