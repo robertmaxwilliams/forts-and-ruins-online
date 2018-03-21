@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"log"
 	"net/http"
 	"strings"
@@ -64,16 +64,16 @@ func emitUserList(so socketio.Socket, userSet map[string]bool) {
 
 func printBoard(game *Game) {
   return // disables this func
-  fmt.Println(game.Room)
+  log.Println(game.Room)
   for _, row := range game.Board {
     for _, cell := range row {
       if cell == "" {
-        fmt.Print(" ")
+        log.Print(" ")
       } else {
-        fmt.Print(string(cell[0]))
+        log.Print(string(cell[0]))
       }
     }
-    fmt.Println()
+    log.Println()
   }
 }
 
@@ -89,7 +89,7 @@ func growForts(game *Game, move Move, iterations int, placedForts *[]Move ) {
     return
   }
   printBoard(game)
-  fmt.Println(move)
+  log.Println(move)
   for _, coords := range [][]int{{0,1}, {1,0}, {-1,0}, {0,-1}} {
     i := move.I + coords[0]
     j := move.J + coords[1]
@@ -107,7 +107,7 @@ func growForts(game *Game, move Move, iterations int, placedForts *[]Move ) {
 
 func killForts(game *Game, placedForts *[]Move) {
 
-  fmt.Println(*placedForts)
+  log.Println(*placedForts)
   printBoard(game)
   for _, move := range *placedForts {
     i := move.I
@@ -164,9 +164,9 @@ func makeMove(game *Game, move Move) {
 }
 
 func updateGame(game *Game) bool{
-  fmt.Println("updating game ", game)
+  log.Println("updating game ", game)
   if (game.HostMove != Move{}) && (game.GuestMove != Move{}) {
-    fmt.Println("moves in for ", game.Room, "playing moves")
+    log.Println("moves in for ", game.Room, "playing moves")
     if game.HostMove.I != game.GuestMove.I || game.HostMove.J != game.GuestMove.J {
       makeMove(game, game.HostMove)
       makeMove(game, game.GuestMove)
@@ -184,14 +184,24 @@ func updateGame(game *Game) bool{
 func main() {
 
 	// "--testing" flag to run in local dir
+	// "--disable-logs flag for server performance
 	isTestingPtr := flag.Bool("testing", false, "set this flag to run on localhost under ./")
+	disableLogsPtr := flag.Bool("disable-logs", false, "set this flag for performance improvement by no log.")
     flag.Parse()
 	isTesting := *isTestingPtr
+	disableLogs := *disableLogsPtr
+
 	workingDir := "/home/public/forts-and-ruins-online/"
 	serverAddress := "http://fortsandruins.nfshost.com"
+
 	if isTesting {
 		workingDir = "./"
 		serverAddress = "http://localhost:8080"
+	}
+
+	if disableLogs {
+		log.SetFlags(0)
+		log.SetOutput(ioutil.Discard)
 	}
 
 	var userSet = make(map[string]bool)
@@ -218,13 +228,13 @@ func main() {
 		so.Join(room)
 
 		so.On("room", func(msg string) {
-			fmt.Println(user + " joined room ", msg)
+			log.Println(user + " joined room ", msg)
 			so.Join(msg)
 			room = msg
 		})
 
 		so.On("setname", func(msg string) {
-			fmt.Println("setname: ", msg, ", in room: ", room)
+			log.Println("setname: ", msg, ", in room: ", room)
 			user = strings.Trim(msg, " ")
 			userSet[user] = true
 			emitUserList(so, userSet)
@@ -235,7 +245,7 @@ func main() {
 		})
 
 		so.On("unsetname", func(msg string) {
-			fmt.Println("unsetname: ", msg, ", in room: ", room)
+			log.Println("unsetname: ", msg, ", in room: ", room)
 			so.BroadcastTo(room, "message", msg + " has logged out\n")
 			user = strings.Trim(msg, " ")
 			userSet[user] = false
@@ -243,19 +253,19 @@ func main() {
 		})
 
 		so.On("message", func(msg string) {
-			fmt.Println("message: ", msg)
+			log.Println("message: ", msg)
 			so.BroadcastTo(room, "message", msg)
 		})
 
 		so.On("makematch", func(msg string) {
-			fmt.Println(msg)
+			log.Println(msg)
 			var newMatch Match
 			_ = json.Unmarshal([]byte(msg), &newMatch)
 			matches = append(matches, newMatch)
-			fmt.Println("made new match: ", newMatch.Host, newMatch.Boardsize, " from: ", msg)
+			log.Println("made new match: ", newMatch.Host, newMatch.Boardsize, " from: ", msg)
 			matchJson, _ := json.Marshal(matches)
 			so.BroadcastTo("lobby", "updatedmatches", string(matchJson))
-			fmt.Println("sending callback to ", user)
+			log.Println("sending callback to ", user)
 			so.Emit("updatedmatches", string(matchJson))
 		})
 
@@ -267,7 +277,7 @@ func main() {
 				return
 			}
 			matches = append(matches[:index], matches[index+1:]...)
-			fmt.Println("deleted a match, here's what's left: ", matches)
+			log.Println("deleted a match, here's what's left: ", matches)
 			matchJson, _ := json.Marshal(matches)
 			so.Emit("updatedmatches", string(matchJson))
 		})
@@ -284,7 +294,7 @@ func main() {
 				log.Println("Invalid game room, should be host:guest (you are guest)")
 				return
 			}
-			fmt.Println("making game room for", host, "and", guest)
+			log.Println("making game room for", host, "and", guest)
 
 			// TODO Check if both users are on lobby
 
@@ -301,10 +311,10 @@ func main() {
 		})
 
     so.On("playmove", func (move string) {
-      fmt.Println(user, "played", move)
+      log.Println(user, "played", move)
       var newMove Move
       _ = json.Unmarshal([]byte(move), &newMove)
-      fmt.Println("unmarshalled to", newMove)
+      log.Println("unmarshalled to", newMove)
       game := games[room]
       if game.Host == user {
         game.HostMove = newMove
@@ -319,7 +329,7 @@ func main() {
       if succeeded {
         gameJson, _ := json.Marshal(game)
         so.Emit("updatedgame", string(gameJson))
-        fmt.Println("sending back json for game: ", string(gameJson))
+        log.Println("sending back json for game: ", string(gameJson))
         so.BroadcastTo(game.Room, "updatedgame", string(gameJson))
       } else {
         so.Emit("message", "moves not valid or waiting on opponent")
@@ -327,7 +337,7 @@ func main() {
     })
 
     so.On("cancelmove", func(msg string) {
-      fmt.Println(user, "canceled move")
+      log.Println(user, "canceled move")
       game := games[room]
       if game.Host == user {
         game.HostMove = Move{}
@@ -337,7 +347,7 @@ func main() {
     })
 
 		so.On("disconnection", func() {
-			fmt.Println("on disconnect")
+			log.Println("on disconnect")
 			userSet[user] = false
 			emitUserList(so, userSet)
 		})
