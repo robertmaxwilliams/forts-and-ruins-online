@@ -94,6 +94,7 @@ function drawSquare(i, j, color, context, diamondColor){
   let topp = Math.floor(boardHeight*(j/gridSize))
   let width = Math.floor(boardWidth*((i+1)/gridSize)) - left
   let height = Math.floor(boardHeight*((j+1)/gridSize)) - topp
+
   if (color == 'erase') {
     context.clearRect(left, topp, width, height)
   } else {
@@ -103,14 +104,20 @@ function drawSquare(i, j, color, context, diamondColor){
     context.fill();
     context.closePath();
   }
+
   if (diamondColor) {
     let half = Math.floor(dx/2)
     context.fillStyle = diamondColor
     context.beginPath();
-    context.moveTo(dx*i+half, dy*j)
-    context.lineTo(dx*i+dx, dy*j+half)
-    context.lineTo(dx*i+half, dy*j+dy)
-    context.lineTo(dx*i, dy*j+half)
+    
+    let x_px = boardWidth * (i / gridSize) 
+    let y_px = boardHeight * (j / gridSize)
+    console.log('diamond: ', x_px, y_px)
+ 
+    context.moveTo(x_px + half, y_px)
+    context.lineTo(x_px + 2*half, y_px + half)
+    context.lineTo(x_px + half, y_px + 2*half)
+    context.lineTo(x_px, y_px + half)
     context.closePath();
     context.fill()
   }
