@@ -2,13 +2,13 @@ package main
 
 import (
 	"log"
-	"log"
 	"net/http"
 	"strings"
 	"encoding/json"
 	"flag"
 	"math/rand"
 	"strconv"
+	"io/ioutil"
 	"github.com/googollee/go-socket.io"
 )
 
@@ -104,9 +104,8 @@ func growForts(game *Game, move Move, iterations int, placedForts *[]Move ) {
   }
 }
 
-
+//detroys forts grown by growForts
 func killForts(game *Game, placedForts *[]Move) {
-
   log.Println(*placedForts)
   printBoard(game)
   for _, move := range *placedForts {
@@ -147,8 +146,9 @@ func killRandomColor(game *Game) {
 		  checki := i + checkCoords[0]
 		  checkj := j + checkCoords[1]
 		  if (checki >= 15 || checki < 0 || checkj >= 15 || checkj < 0) { continue }
-		  if game.Board[checki][checkj] == "F" {
-			  game.Board[checki][checkj] = "D"
+		  if game.Board[checki][checkj] == game.Host || game.Board[checki][checkj] == game.Guest{
+			log.Println("converted fort to deadfort")
+			  game.Board[checki][checkj] = "R"
 		  }
 		}
       }
