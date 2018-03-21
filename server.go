@@ -63,6 +63,7 @@ func emitUserList(so socketio.Socket, userSet map[string]bool) {
 }
 
 func printBoard(game *Game) {
+  return // disables this func
   fmt.Println(game.Room)
   for _, row := range game.Board {
     for _, cell := range row {
