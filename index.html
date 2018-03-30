@@ -42,7 +42,8 @@
     <div id="login-logout-area" >
       <h1> welcome to forts and ruins online multiplayer </h1>
 
-      <div class="helphover" > Help/How-To 
+      <div class="helphover" > 
+        <span style="float: right; margin-right: 20px;"> Help/How-To </span>
 
         <div id="help" class="helptext">
           <h5> How To Play </h5>
@@ -135,23 +136,26 @@
 
 <style>
 .helptext {
-    display: inline-block;
     border: 3px solid black;
 
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    margin-left: auto; 
+    margin-right: auto; 
+    width: 80%; /* Need a specific value to work */
+
     visibility: hidden;
-    width: 80%;
+
     height: 80%;
     text-align: left;
     border-radius: 6px;
     padding: 20px;
     background-color: white;
 
-    /* Position the tooltip */
-    position: absolute;
     z-index: 1;
 }
 .helphover:hover .helptext{
-    float: right;
     visibility: visible;
 }
 </style>
