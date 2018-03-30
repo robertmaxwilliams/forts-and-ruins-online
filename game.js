@@ -131,11 +131,14 @@ var lastj = -1
 var lastClickedi = null
 var lastClickedj = null
 
+// used to have square color drag around under mouse if nothing is clicked
 function hoverBoard(event){
   let x = event.offsetX
   let y = event.offsetY
   let i = Math.floor(x * gridSize / boardWidth )
   let j = Math.floor(y * gridSize / boardHeight)
+
+  // don't do anything if nothing moved
   if (i == lasti && j == lastj) {
     return
   }
@@ -154,6 +157,7 @@ function hoverBoard(event){
 
   // bounds checking 
   if (i < gridSize && i >= 0 && j < gridSize && j >= 0){
+    // use full color if valid move, otherwise half alpha
     if (boardLocal[i][j]) {
       ctxTemp.globalAlpha = 0.5
       ctxTemp.fillStyle = colors.barren
@@ -161,8 +165,10 @@ function hoverBoard(event){
       ctxTemp.globalAlpha = 1.0
       ctxTemp.fillStyle = colors.field[pickedColor]
     }
-
-    drawSquare(i, j, colors.field[pickedColor], ctxTemp)
+    // don't draw if click is on
+    if (!lastClickedi && !lastClickedj) {
+      drawSquare(i, j, colors.field[pickedColor], ctxTemp)
+    }
   }
 
   // don't erase if click is on
@@ -176,9 +182,15 @@ function hoverBoard(event){
   lastj = j
  }
 
+function clearTempCanvas() {
+  ctxTemp.clearRect(0, 0, boardWidth, boardHeight)
+}
+
 function unselect() {
   lastClickedi = null
   lastClickedj = null
+  $('#waiting-message').hide()
+  
 }
 
 function clickBoard(event){

@@ -21,6 +21,17 @@
         left: 50%;
         margin-left: -250px;
     }
+    
+    .message {
+        position: absolute;
+        top: 50%;
+        font-size: 2em;
+        -webkit-user-select: none; /* Safari */        
+        -moz-user-select: none; /* Firefox */
+        user-select: none; /* Standard */
+        pointer-events: none;
+        text-align: center; 
+    }
   </style>
   
   <body>
@@ -30,6 +41,25 @@
 
     <div id="login-logout-area" >
       <h1> welcome to forts and ruins online multiplayer </h1>
+
+      <div class="helphover" > Help/How-To 
+
+        <div id="help" class="helptext">
+          <h5> How To Play </h5>
+          Click create match or join a match with a player who is online.
+          <br>
+          Click anywhere to place a "field." Surround a blank square to build a fort. Building the most forts is how you win the game!
+          <br>
+          On the bottom of the screen is a pallete to chose from six colors of forts. Choose a color then click on the board to place a field of that color.
+          <br>
+          Every turn, after both players play their moves, a horrible plague spreads over the land. All fields of one color are killed, and any forts with no fields to sustain them perish as well. If all of your forts die, you lose! Losing makes your opponent win, and you don't want that.
+          <br>
+          Edge cases: <br>
+          If you both place in the same square on the same turn, a dead field is placed instead. Contested land becomes ruined. <br>
+          In cases where both players finish a fort together, the host of the match takes all the forts. <br>
+        </div>
+      </div>
+
 
       <form id="login-form" class="p-2" style="max-width: 500px; display:none;">
         <div class="form-group " >
@@ -87,7 +117,9 @@
       <h5 id="gameheader"></h5>
       <canvas id="main-canvas" width="500" height="600"></canvas>
       <canvas id="temp-canvas" width="500" height="600"></canvas>
+      <span id="waiting-message" class="message" style="display:none;"> Waiting on opponent </span>
     </div>
+
 
     <!-- socket cdn -->
     <script src="https://cdn.socket.io/socket.io-1.0.0.js"></script>
@@ -101,5 +133,25 @@
   </body>
 </html>
 
+<style>
+.helptext {
+    display: inline-block;
+    border: 3px solid black;
 
+    visibility: hidden;
+    width: 80%;
+    height: 80%;
+    text-align: left;
+    border-radius: 6px;
+    padding: 20px;
+    background-color: white;
 
+    /* Position the tooltip */
+    position: absolute;
+    z-index: 1;
+}
+.helphover:hover .helptext{
+    float: right;
+    visibility: visible;
+}
+</style>

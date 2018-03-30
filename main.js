@@ -30,6 +30,8 @@ var otherUsers = []
 var matches = []
 var socket;// = io('http://localhost:8080');
 
+var inSession = false; // set to true on connect, if we get connected again, reload.
+
 // neat code to add "dif" to arrays (from https://stackoverflow.com/questions/1187518/how-to-get-the-difference-between-two-arrays-in-javascript)
 // works like this: 
 // [1,2].diff([2,3])
@@ -46,11 +48,21 @@ function activateSockets(address) {
 
   socket.on('connect', function() {
     console.log('connected')
+    if (inSession) {
+      location.reload()
+    }
+    inSession = true
   });
 
   socket.on('disconnection', function () {
     console.log('disocnnected')
     logout()
+    location.reload()
+  });
+
+  socket.on('reload', function (message) { 
+    console.log("server asked for a reload, something bad must have happened")
+    location.reload()
   });
 
   socket.on('userlist', function(data) {
@@ -92,11 +104,18 @@ function activateSockets(address) {
   socket.on('updatedgame', function(board) {
     // in game.js, un-selects sqaure that was clicked on
     unselect()
+    clearTempCanvas()
     let gameUpdate = JSON.parse(board)
     boardLocal = gameUpdate.Board
     console.log("got full game update")
     killColorAnimation(gameUpdate.KillColor)
     drawBoard()
+    $('#waiting-message').hide()
+  })
+  
+  socket.on('waiting', function(msg) {
+    $('#waiting-message').show()
+    console.log('waiting')
   })
   
 
@@ -130,6 +149,14 @@ function loadEverything(){
   } else {
     login(username, true)
   }
+
+  $('#openhelp').click( function( event ) {
+    $('#help').show()
+  })
+
+  $('#closehelp').click( function( event ) {
+    $('#help').hide()
+  })
 
   $('#login-form').submit( function( event ) {
     event.preventDefault();

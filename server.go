@@ -173,6 +173,8 @@ func updateGame(game *Game) bool{
       addForts(game, game.HostMove, game.Host)
       addForts(game, game.GuestMove, game.Guest)
       killRandomColor(game)
+    } else { // case when both place in the same place
+      makeMove(game,Move{I: game.HostMove.I, J: game.HostMove.J, Color: "B"})
     }
     game.HostMove = Move{}
     game.GuestMove = Move{}
@@ -333,6 +335,7 @@ func main() {
         so.BroadcastTo(game.Room, "updatedgame", string(gameJson))
       } else {
         so.Emit("message", "moves not valid or waiting on opponent")
+        so.Emit("waiting", "")
       }
     })
 
